@@ -33,12 +33,6 @@
   var css_248z = "#solitaire {\n\tbox-sizing: border-box;\n\tbackground-color: darkgreen;\n\tmargin: 1vh 1vw 1vh 1vw;\n}\n";
   styleInject(css_248z);
 
-  /*
-   * TODO:
-   * - Make each cards interactable
-   * - Render the cards in the correct spots using the tableaus somehow
-   * - Check collision on all of the shown cards, and then test for tableau, then for hidden
-   */
   const CARD_WIDTH = 500;
   const CARD_HEIGHT = 726;
   const CARD_SIZE_X = CARD_WIDTH / 6;
@@ -54,7 +48,7 @@
       cards: [],
       deck: null
     },
-    player: {}
+    win: false
   };
   const canvas = document.getElementById('game');
   /** @type CanvasRenderingContext2D */
@@ -109,6 +103,10 @@
     let heightHit = mousePoint.y > element.point.y && mousePoint.y < element.point.y + element.height;
     let widthHit = mousePoint.x > element.point.x && mousePoint.x < element.point.x + element.width;
     return heightHit && widthHit;
+  }
+
+  function checkWinState() {
+    GameState.win = GameState.elements.foundations.every(f => f.topCard && f.topCard.number === 13);
   }
 
   function Point(x, y) {
@@ -218,6 +216,13 @@
 
       ctx.restore();
     };
+
+    Object.defineProperty(this, 'topCard', {
+      get() {
+        return this.cards[this.cards.length - 1];
+      }
+
+    });
   }
 
   function Tableau(point) {
@@ -226,8 +231,8 @@
     this.width = CARD_SIZE_X;
 
     this.isPushable = card => {
-      if (this.cards.length === 0 && card.number === 13) {
-        return true;
+      if (this.cards.length === 0) {
+        return card.number === 13;
       }
 
       return this.topCard.color !== card.color && this.topCard.number === card.number + 1;
@@ -272,7 +277,7 @@
 
   function setup() {
     const nextFoundationPoint = new Point(250, 10);
-    const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 2.8); // Cards
+    const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 3.5); // Cards
 
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 13; j++) {
@@ -285,21 +290,23 @@
       let f = new Foundation(nextFoundationPoint, i);
       GameState.elements.foundations.push(f);
       nextFoundationPoint.translate(140, 0);
-    } // Tableaus
+    }
 
+    {
+      // Tableaus
+      for (let i = 0; i < 7; i++) {
+        let t = new Tableau(nextTableauPoint);
 
-    for (let i = 0; i < 7; i++) {
-      let t = new Tableau(nextTableauPoint);
+        for (let j = 0; j < i + 1; j++) {
+          let [index, randomCard] = GameState.elements.cards.random();
+          randomCard.hidden = j !== i;
+          GameState.elements.cards.splice(index, 1);
+          t.push(randomCard);
+        }
 
-      for (let j = 0; j < i + 1; j++) {
-        let [index, randomCard] = GameState.elements.cards.random();
-        randomCard.hidden = j !== i;
-        GameState.elements.cards.splice(index, 1);
-        t.push(randomCard);
+        GameState.elements.tableaus.push(t);
+        nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
       }
-
-      GameState.elements.tableaus.push(t);
-      nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
     } // Deck
 
 
@@ -314,6 +321,16 @@
     GameState.elements.tableaus.forEach(t => t.draw());
     GameState.elements.deck.draw();
     GameState.elements.deck.cards.forEach(c => c.draw());
+
+    if (GameState.win) {
+      ctx.font = '30px Verdana';
+      let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradient.addColorStop('0', 'magenta');
+      gradient.addColorStop('0.5', 'blue');
+      gradient.addColorStop('1.0', 'red');
+      ctx.fillStyle = gradient;
+      ctx.fillText('You Win!', CANVAS_WIDTH - (CANVAS_WIDTH - 450), CANVAS_HEIGHT - 650);
+    }
   }
 
   function handleMouseDown(e) {
@@ -321,14 +338,22 @@
     e.stopPropagation();
     lastMousePoint = getMousePos(canvas, e);
     GameState.elements.tableaus.forEach(t => {
-      if (isClicked(lastMousePoint, t) && t.cards.length > 0) {
-        let topCard = t.cards.last();
+      if (isClicked(lastMousePoint, t) && t.cards.length !== 0) {
+        let shownCards = t.cards.filter(c => !c.hidden);
 
-        if (topCard.hidden) {
+        if (shownCards.length === 0) {
           t.showCard();
+          return;
         }
 
-        draggedCard = topCard;
+        shownCards.reverse();
+        let clickedCardIndex = shownCards.findIndex(c => isClicked(lastMousePoint, c));
+
+        if (clickedCardIndex === 0) {
+          draggedCard = shownCards[0];
+        } else {
+          draggedCard = shownCards.slice(0, clickedCardIndex + 1).reverse();
+        }
       }
     }); // Deck cards check
 
@@ -361,8 +386,17 @@
     let dx = mousePoint.x - lastMousePoint.x;
     let dy = mousePoint.y - lastMousePoint.y;
     lastMousePoint = new Point(mousePoint.x, mousePoint.y);
-    draggedCard.point.x += dx;
-    draggedCard.point.y += dy;
+
+    if (Array.isArray(draggedCard)) {
+      draggedCard.forEach(c => {
+        c.point.x += dx;
+        c.point.y += dy;
+      });
+    } else {
+      draggedCard.point.x += dx;
+      draggedCard.point.y += dy;
+    }
+
     draw();
   }
 
@@ -371,15 +405,30 @@
     e.stopPropagation();
     let hitElement;
 
-    if (draggedCard) {
+    if (draggedCard && !Array.isArray(draggedCard)) {
       hitElement = GameState.elements.foundations.find(f => isColliding(draggedCard, f));
       hitElement = !hitElement ? GameState.elements.tableaus.find(t => isColliding(draggedCard, t)) : hitElement;
 
       if (hitElement && hitElement.isPushable(draggedCard)) {
         draggedCard.parent.remove(draggedCard);
         hitElement.push(draggedCard);
+        checkWinState();
       } else {
         draggedCard.reset();
+      }
+
+      draggedCard = null;
+    } else if (Array.isArray(draggedCard)) {
+      let topCard = draggedCard[0];
+      hitElement = GameState.elements.tableaus.find(t => isColliding(topCard, t));
+
+      if (hitElement && hitElement.isPushable(topCard)) {
+        draggedCard.forEach(dc => {
+          dc.parent.remove(dc);
+          hitElement.push(dc);
+        });
+      } else {
+        draggedCard.forEach(dc => dc.reset());
       }
 
       draggedCard = null;

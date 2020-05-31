@@ -1,10 +1,3 @@
-/*
- * TODO:
- * - Make each cards interactable
- * - Render the cards in the correct spots using the tableaus somehow
- * - Check collision on all of the shown cards, and then test for tableau, then for hidden
- */
-
 import './styles/solitaire.css';
 
 const CARD_WIDTH = 500;
@@ -15,8 +8,9 @@ const CANVAS_WIDTH = document.documentElement.clientWidth;
 const CANVAS_HEIGHT = document.documentElement.clientHeight;
 const SUITS_TO_COLORS = ['black', 'red', 'red', 'black']
 
+const DEBUG_WIN = false;
 const Sprites = new Image();
-const GameState = { elements: { foundations: [], tableaus: [], cards: [], deck: null } , player: {} };
+const GameState = { elements: { foundations: [], tableaus: [], cards: [], deck: null } , win: false };
 
 const canvas = document.getElementById('game');
 /** @type CanvasRenderingContext2D */
@@ -66,6 +60,10 @@ function isClicked(mousePoint, element) {
 	let heightHit = mousePoint.y > element.point.y && mousePoint.y < element.point.y + element.height;
 	let widthHit = mousePoint.x > element.point.x && mousePoint.x < element.point.x + element.width;
 	return heightHit && widthHit;
+}
+
+function checkWinState() {
+	GameState.win = GameState.elements.foundations.every(f => f.topCard && f.topCard.number === 13);
 }
 
 function Point(x,y) {
@@ -158,6 +156,11 @@ function Foundation(point, suit) {
 		}
 		ctx.restore();
 	}
+	Object.defineProperty(this, 'topCard', {
+		get() {
+			return this.cards[this.cards.length - 1];
+		}
+	});
 };
 
 function Tableau(point) {
@@ -165,8 +168,8 @@ function Tableau(point) {
 	this.point = Object.assign({}, point);
 	this.width = CARD_SIZE_X;
 	this.isPushable = card => {
-		if (this.cards.length === 0 && card.number === 13) {
-			return true;
+		if (this.cards.length === 0) {
+			return card.number === 13;
 		}
 		return this.topCard.color !== card.color && this.topCard.number === card.number + 1;
 	};
@@ -203,7 +206,7 @@ function Tableau(point) {
 
 function setup() {
 	const nextFoundationPoint = new Point(250, 10);
-	const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 2.8)
+	const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 3.5)
 
 	// Cards
 	for (let i = 0; i < 4; i++) {
@@ -219,17 +222,53 @@ function setup() {
 		nextFoundationPoint.translate(140, 0);
 	}
 
-	// Tableaus
-	for (let i = 0; i < 7; i++) {
-		let t = new Tableau(nextTableauPoint);
-		for (let j = 0; j < i + 1; j++) {
-			let [index, randomCard] = GameState.elements.cards.random();
-			randomCard.hidden = j !== i;
-			GameState.elements.cards.splice(index, 1);
-			t.push(randomCard);
+	if (DEBUG_WIN) {
+		let onlyClubs = GameState.elements.cards.filter(c => c.suit === 0);
+		let onlyDiamonds = GameState.elements.cards.filter(c => c.suit === 1);
+		let onlyHearts = GameState.elements.cards.filter(c => c.suit === 2);
+		let onlySpades = GameState.elements.cards.filter(c => c.suit === 3);
+		GameState.elements.foundations.forEach(f => {
+			switch(f.suit) {
+				case 0:
+					onlyClubs.forEach(c => {
+						c.hidden = false;
+						f.push(c);
+					});
+					break;
+				case 1:
+					onlyDiamonds.forEach(c => {
+						c.hidden = false;
+						f.push(c);
+					});
+					break;
+				case 2:
+					onlyHearts.forEach(c => {
+						c.hidden = false;
+						f.push(c);
+					});
+					break;
+				case 3:
+					onlySpades.forEach(c => {
+						c.hidden = false;
+						f.push(c);
+					});
+					break;
+			}
+		});
+		checkWinState();
+	} else {
+		// Tableaus
+		for (let i = 0; i < 7; i++) {
+			let t = new Tableau(nextTableauPoint);
+			for (let j = 0; j < i + 1; j++) {
+				let [index, randomCard] = GameState.elements.cards.random();
+				randomCard.hidden = j !== i;
+				GameState.elements.cards.splice(index, 1);
+				t.push(randomCard);
+			}
+			GameState.elements.tableaus.push(t);
+			nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
 		}
-		GameState.elements.tableaus.push(t);
-		nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
 	}
 
 	// Deck
@@ -245,6 +284,15 @@ function draw() {
 	GameState.elements.tableaus.forEach(t => t.draw());
 	GameState.elements.deck.draw();
 	GameState.elements.deck.cards.forEach(c => c.draw());
+	if (GameState.win) {
+		ctx.font = '30px Verdana';
+		let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+		gradient.addColorStop('0', 'magenta');
+		gradient.addColorStop('0.5', 'blue');
+		gradient.addColorStop('1.0', 'red');
+		ctx.fillStyle = gradient;
+		ctx.fillText('You Win!', CANVAS_WIDTH - (CANVAS_WIDTH - 450) , CANVAS_HEIGHT - 650);
+	}
 }
 
 function handleMouseDown(e) {
@@ -254,12 +302,19 @@ function handleMouseDown(e) {
 	lastMousePoint = getMousePos(canvas, e);
 
 	GameState.elements.tableaus.forEach(t => {
-		if (isClicked(lastMousePoint, t) && t.cards.length > 0){
-			let topCard = t.cards.last(); 
-			if (topCard.hidden) {
+		if (isClicked(lastMousePoint, t) && t.cards.length !== 0){
+			let shownCards = t.cards.filter(c => !c.hidden);
+			if (shownCards.length === 0) {
 				t.showCard();
+				return;
 			}
-			draggedCard = topCard;
+			shownCards.reverse();
+			let clickedCardIndex = shownCards.findIndex(c => isClicked(lastMousePoint, c));
+			if (clickedCardIndex === 0) {
+				draggedCard = shownCards[0];
+			} else {
+				draggedCard = shownCards.slice(0, clickedCardIndex + 1).reverse();
+			}
 		}
 	});
 
@@ -295,8 +350,15 @@ function handleMouseMove(e) {
 
 	lastMousePoint = new Point(mousePoint.x, mousePoint.y);
 
-	draggedCard.point.x += dx;
-	draggedCard.point.y += dy;
+	if (Array.isArray(draggedCard)){
+		draggedCard.forEach(c => {
+			c.point.x += dx;
+			c.point.y += dy;
+		});
+	} else {
+		draggedCard.point.x += dx;
+		draggedCard.point.y += dy;
+	}
 
 	draw();
 }
@@ -307,14 +369,27 @@ function handleMouseUp(e) {
 
 	let hitElement;
 
-	if (draggedCard) {
+	if (draggedCard && !Array.isArray(draggedCard)) {
 		hitElement = GameState.elements.foundations.find(f => isColliding(draggedCard, f));
 		hitElement = !hitElement ? GameState.elements.tableaus.find(t => isColliding(draggedCard, t)) : hitElement;
 		if (hitElement && hitElement.isPushable(draggedCard)) {
 			draggedCard.parent.remove(draggedCard);
 			hitElement.push(draggedCard);
+			checkWinState();
 		} else {
 			draggedCard.reset();
+		}
+		draggedCard = null;
+	} else if (Array.isArray(draggedCard)) {
+		let topCard = draggedCard[0];
+		hitElement = GameState.elements.tableaus.find(t => isColliding(topCard, t));
+		if (hitElement && hitElement.isPushable(topCard)) {
+			draggedCard.forEach(dc => {
+				dc.parent.remove(dc);
+				hitElement.push(dc);
+			});
+		} else {
+			draggedCard.forEach(dc => dc.reset());
 		}
 		draggedCard = null;
 	}

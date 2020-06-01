@@ -1,5 +1,4 @@
-import './styles/solitaire.css';
-
+const DEBUG = false;
 const CARD_WIDTH = 500;
 const CARD_HEIGHT = 726;
 const CARD_SIZE_X = CARD_WIDTH / 6;
@@ -8,24 +7,13 @@ const CANVAS_WIDTH = document.documentElement.clientWidth;
 const CANVAS_HEIGHT = document.documentElement.clientHeight;
 const SUITS_TO_COLORS = ['black', 'red', 'red', 'black']
 
-const DEBUG_WIN = false;
 const Sprites = new Image();
-const GameState = { elements: { foundations: [], tableaus: [], cards: [], deck: null } , win: false };
+const GameState = { foundations: [], tableaus: [], cards: [], deck: null, win: false };
 
-const canvas = document.getElementById('game');
-/** @type CanvasRenderingContext2D */
+const canvas = document.createElement('CANVAS');
 const ctx = canvas.getContext('2d');
 
-canvas.onmouseup = function(e) { handleMouseUp(e); };
-canvas.onmousedown = function(e) { handleMouseDown(e); };
-canvas.onmousemove = function(e) { handleMouseMove(e); };
-
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
-canvas.style.width = CANVAS_WIDTH;
-canvas.style.height = CANVAS_HEIGHT;
-
-Sprites.onload = setup;
+Sprites.onload = Setup;
 Sprites.src = 'cards-spritesheet.png';
 
 let lastMousePoint;
@@ -62,8 +50,8 @@ function isClicked(mousePoint, element) {
 	return heightHit && widthHit;
 }
 
-function checkWinState() {
-	GameState.win = GameState.elements.foundations.every(f => f.topCard && f.topCard.number === 13);
+function setWinState() {
+	GameState.win = GameState.foundations.every(f => f.topCard && f.topCard.number === 13);
 }
 
 function Point(x,y) {
@@ -81,7 +69,7 @@ function Deck(point) {
 	this.width = CARD_SIZE_X;
 	this.height = CARD_SIZE_Y;
 	this.reset = () => {
-		GameState.elements.cards = [...this.cards];
+		GameState.cards = [...this.cards];
 		this.cards = [];
 	};
 	this.remove = card => {
@@ -204,86 +192,61 @@ function Tableau(point) {
 	});
 }
 
-function setup() {
+function Setup() {
+	canvas.onmouseup = function(e) { handleMouseUp(e); };
+	canvas.onmousedown = function(e) { handleMouseDown(e); };
+	canvas.onmousemove = function(e) { handleMouseMove(e); };
+
+	canvas.width = CANVAS_WIDTH;
+	canvas.height = CANVAS_HEIGHT;
+	canvas.style.width = CANVAS_WIDTH;
+	canvas.style.height = CANVAS_HEIGHT;
+
+	canvas.style.cssText = "background-color: darkgreen; margin: 1vh 1vw 1vh 1vw;";
+	document.getElementById('simple-solitaire').appendChild(canvas);
+
 	const nextFoundationPoint = new Point(250, 10);
 	const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 3.5)
 
 	// Cards
 	for (let i = 0; i < 4; i++) {
 		for (let j = 0; j < 13; j++) {
-			GameState.elements.cards.push(new Card(j + 1, i));
+			GameState.cards.push(new Card(j + 1, i));
 		}
 	}
 
 	// Foundations
 	for (let i = 0; i < 4; i++) {
 		let f = new Foundation(nextFoundationPoint, i);
-		GameState.elements.foundations.push(f);
+		GameState.foundations.push(f);
 		nextFoundationPoint.translate(140, 0);
 	}
 
-	if (DEBUG_WIN) {
-		let onlyClubs = GameState.elements.cards.filter(c => c.suit === 0);
-		let onlyDiamonds = GameState.elements.cards.filter(c => c.suit === 1);
-		let onlyHearts = GameState.elements.cards.filter(c => c.suit === 2);
-		let onlySpades = GameState.elements.cards.filter(c => c.suit === 3);
-		GameState.elements.foundations.forEach(f => {
-			switch(f.suit) {
-				case 0:
-					onlyClubs.forEach(c => {
-						c.hidden = false;
-						f.push(c);
-					});
-					break;
-				case 1:
-					onlyDiamonds.forEach(c => {
-						c.hidden = false;
-						f.push(c);
-					});
-					break;
-				case 2:
-					onlyHearts.forEach(c => {
-						c.hidden = false;
-						f.push(c);
-					});
-					break;
-				case 3:
-					onlySpades.forEach(c => {
-						c.hidden = false;
-						f.push(c);
-					});
-					break;
-			}
-		});
-		checkWinState();
-	} else {
-		// Tableaus
-		for (let i = 0; i < 7; i++) {
-			let t = new Tableau(nextTableauPoint);
-			for (let j = 0; j < i + 1; j++) {
-				let [index, randomCard] = GameState.elements.cards.random();
-				randomCard.hidden = j !== i;
-				GameState.elements.cards.splice(index, 1);
-				t.push(randomCard);
-			}
-			GameState.elements.tableaus.push(t);
-			nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
+	// Tableaus
+	for (let i = 0; i < 7; i++) {
+		let t = new Tableau(nextTableauPoint);
+		for (let j = 0; j < i + 1; j++) {
+			let [index, randomCard] = GameState.cards.random();
+			randomCard.hidden = j !== i;
+			GameState.cards.splice(index, 1);
+			t.push(randomCard);
 		}
+		GameState.tableaus.push(t);
+		nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
 	}
 
 	// Deck
-	let deckPos = new Point(CANVAS_WIDTH - (CANVAS_WIDTH - 70), CANVAS_HEIGHT - 200);
-	GameState.elements.deck = new Deck(deckPos);
+	GameState.deck = new Deck(new Point(CANVAS_WIDTH - (CANVAS_WIDTH - 70), CANVAS_HEIGHT - 200));
 
-	draw();
+	Draw();
 }
 
-function draw() {
+function Draw() {
 	ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
-	GameState.elements.foundations.forEach(f => f.draw());
-	GameState.elements.tableaus.forEach(t => t.draw());
-	GameState.elements.deck.draw();
-	GameState.elements.deck.cards.forEach(c => c.draw());
+	GameState.foundations.forEach(f => f.draw());
+	GameState.tableaus.forEach(t => t.draw());
+	GameState.deck.draw();
+	GameState.deck.cards.forEach(c => c.draw());
 	if (GameState.win) {
 		ctx.font = '30px Verdana';
 		let gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
@@ -301,7 +264,7 @@ function handleMouseDown(e) {
 
 	lastMousePoint = getMousePos(canvas, e);
 
-	GameState.elements.tableaus.forEach(t => {
+	GameState.tableaus.forEach(t => {
 		if (isClicked(lastMousePoint, t) && t.cards.length !== 0){
 			let shownCards = t.cards.filter(c => !c.hidden);
 			if (shownCards.length === 0) {
@@ -319,19 +282,19 @@ function handleMouseDown(e) {
 	});
 
 	// Deck cards check
-	GameState.elements.deck.cards.forEach( c => {
+	GameState.deck.cards.forEach( c => {
 		if (isClicked(lastMousePoint, c)) {
 			draggedCard = c;
 		}
 	});
 
 	// Deck click check
-	if (isClicked(lastMousePoint, GameState.elements.deck)) {
-		if (GameState.elements.cards.length === 0) {
-			GameState.elements.deck.reset();
+	if (isClicked(lastMousePoint, GameState.deck)) {
+		if (GameState.cards.length === 0) {
+			GameState.deck.reset();
 			return;
 		}
-		GameState.elements.deck.push(GameState.elements.cards.pop());
+		GameState.deck.push(GameState.cards.pop());
 	}
 
 	isDown = true;
@@ -360,7 +323,7 @@ function handleMouseMove(e) {
 		draggedCard.point.y += dy;
 	}
 
-	draw();
+	Draw();
 }
 
 function handleMouseUp(e) {
@@ -370,19 +333,19 @@ function handleMouseUp(e) {
 	let hitElement;
 
 	if (draggedCard && !Array.isArray(draggedCard)) {
-		hitElement = GameState.elements.foundations.find(f => isColliding(draggedCard, f));
-		hitElement = !hitElement ? GameState.elements.tableaus.find(t => isColliding(draggedCard, t)) : hitElement;
+		hitElement = GameState.foundations.find(f => isColliding(draggedCard, f));
+		hitElement = !hitElement ? GameState.tableaus.find(t => isColliding(draggedCard, t)) : hitElement;
 		if (hitElement && hitElement.isPushable(draggedCard)) {
 			draggedCard.parent.remove(draggedCard);
 			hitElement.push(draggedCard);
-			checkWinState();
+			setWinState();
 		} else {
 			draggedCard.reset();
 		}
 		draggedCard = null;
 	} else if (Array.isArray(draggedCard)) {
 		let topCard = draggedCard[0];
-		hitElement = GameState.elements.tableaus.find(t => isColliding(topCard, t));
+		hitElement = GameState.tableaus.find(t => isColliding(topCard, t));
 		if (hitElement && hitElement.isPushable(topCard)) {
 			draggedCard.forEach(dc => {
 				dc.parent.remove(dc);
@@ -396,5 +359,5 @@ function handleMouseUp(e) {
 
 	isDown = false;
 
-	draw();
+	Draw();
 }

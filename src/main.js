@@ -19,15 +19,6 @@ let lastMousePoint;
 let isDown = false;
 let draggedCard = null;
 
-Array.prototype.random = function() {
-    let randomIndex = Math.floor(Math.random() * this.length);
-    return [randomIndex, this[randomIndex]];
-};
-
-Array.prototype.last = function() {
-    return this[this.length - 1];
-};
-
 function isColliding(rect1, rect2) {
     if (rect1.point.x < rect2.point.x + rect2.width &&
         rect1.point.x + rect1.width > rect2.point.x &&
@@ -92,7 +83,6 @@ function Deck(point) {
 }
 
 function Card(number, suit, point = {x: 0, y: 0}) {
-    this.children = [];
     this.parent = {};
     this.suit = suit;
     this.point = point;
@@ -192,9 +182,9 @@ function Tableau(point) {
 }
 
 function Setup() {
-    canvas.onmouseup = function(e) { handleMouseUp(e); };
-    canvas.onmousedown = function(e) { handleMouseDown(e); };
-    canvas.onmousemove = function(e) { handleMouseMove(e); };
+    canvas.onmouseup = handleMouseUp;
+    canvas.onmousedown = handleMouseDown;
+    canvas.onmousemove = handleMouseMove;
 
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
@@ -225,9 +215,10 @@ function Setup() {
     for (let i = 0; i < 7; i++) {
         let t = new Tableau(nextTableauPoint);
         for (let j = 0; j < i + 1; j++) {
-            let [index, randomCard] = GameState.cards.random();
+            let randomIndex = Math.floor(Math.random() * GameState.cards.length);
+            let randomCard = GameState.cards[randomIndex];
             randomCard.hidden = j !== i;
-            GameState.cards.splice(index, 1);
+            GameState.cards.splice(randomIndex, 1);
             t.push(randomCard);
         }
         GameState.tableaus.push(t);

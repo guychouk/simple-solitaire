@@ -7,7 +7,7 @@ const CANVAS_HEIGHT = document.documentElement.clientHeight;
 const SUITS_TO_COLORS = ['black', 'red', 'red', 'black']
 
 const Sprites = new Image();
-const GameState = { foundations: [], tableaus: [], cards: [], deck: null, win: false };
+const GameState = {foundations: [], tableaus: [], cards: [], deck: null, win: false};
 
 const canvas = document.createElement('CANVAS');
 const ctx = canvas.getContext('2d');
@@ -44,7 +44,7 @@ function setWinState() {
     GameState.win = GameState.foundations.every(f => f.topCard && f.topCard.number === 13);
 }
 
-function Point(x,y) {
+function Point(x, y) {
     this.x = x;
     this.y = y;
     this.translate = (xAmount, yAmount) => {
@@ -232,7 +232,7 @@ function Setup() {
 }
 
 function Draw() {
-    ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     GameState.foundations.forEach(f => f.draw());
     GameState.tableaus.forEach(t => t.draw());
     GameState.deck.draw();
@@ -244,7 +244,7 @@ function Draw() {
         gradient.addColorStop('0.5', 'blue');
         gradient.addColorStop('1.0', 'red');
         ctx.fillStyle = gradient;
-        ctx.fillText('You Win!', CANVAS_WIDTH - (CANVAS_WIDTH - 450) , CANVAS_HEIGHT - 650);
+        ctx.fillText('You Win!', CANVAS_WIDTH - (CANVAS_WIDTH - 450), CANVAS_HEIGHT - 650);
     }
 }
 
@@ -255,7 +255,7 @@ function handleMouseDown(e) {
     lastMousePoint = getMousePos(canvas, e);
 
     GameState.tableaus.forEach(t => {
-        if (isClicked(lastMousePoint, t) && t.cards.length !== 0){
+        if (isClicked(lastMousePoint, t) && t.cards.length !== 0) {
             let shownCards = t.cards.filter(c => !c.hidden);
             if (shownCards.length === 0) {
                 t.showCard();
@@ -272,7 +272,7 @@ function handleMouseDown(e) {
     });
 
     // Deck cards check
-    GameState.deck.cards.forEach( c => {
+    GameState.deck.cards.forEach(c => {
         if (isClicked(lastMousePoint, c)) {
             draggedCard = c;
         }
@@ -291,7 +291,7 @@ function handleMouseDown(e) {
 }
 
 function handleMouseMove(e) {
-    if (!isDown || !draggedCard) { return; }
+    if (!isDown || !draggedCard) {return;}
 
     e.preventDefault();
     e.stopPropagation();
@@ -303,7 +303,7 @@ function handleMouseMove(e) {
 
     lastMousePoint = new Point(mousePoint.x, mousePoint.y);
 
-    if (Array.isArray(draggedCard)){
+    if (Array.isArray(draggedCard)) {
         draggedCard.forEach(c => {
             c.point.x += dx;
             c.point.y += dy;

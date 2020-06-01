@@ -1,2 +1,4 @@
 node_modules
+public/game.js
+public/game.js.map
 tags*

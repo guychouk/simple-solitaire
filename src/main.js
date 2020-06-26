@@ -182,36 +182,34 @@ function Tableau(point) {
 }
 
 function Setup() {
-    canvas.onmouseup = handleMouseUp;
-    canvas.onmousedown = handleMouseDown;
-    canvas.onmousemove = handleMouseMove;
-
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     canvas.style.width = CANVAS_WIDTH;
     canvas.style.height = CANVAS_HEIGHT;
+    canvas.style.margin = '1vh 1vw 1vh 1vw';
+    canvas.style.backgroundColor = 'darkgreen';
 
-    canvas.style.cssText = "background-color: darkgreen; margin: 1vh 1vw 1vh 1vw;";
+    canvas.onmouseup = handleMouseUp;
+    canvas.onmousedown = handleMouseDown;
+    canvas.onmousemove = handleMouseMove;
+
     document.getElementById('simple-solitaire').appendChild(canvas);
 
     const nextFoundationPoint = new Point(250, 10);
     const nextTableauPoint = new Point(CANVAS_WIDTH / 12, CANVAS_HEIGHT / 3.5)
 
-    // Cards
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 13; j++) {
             GameState.cards.push(new Card(j + 1, i));
         }
     }
 
-    // Foundations
     for (let i = 0; i < 4; i++) {
         let f = new Foundation(nextFoundationPoint, i);
         GameState.foundations.push(f);
         nextFoundationPoint.translate(140, 0);
     }
 
-    // Tableaus
     for (let i = 0; i < 7; i++) {
         let t = new Tableau(nextTableauPoint);
         for (let j = 0; j < i + 1; j++) {
@@ -225,7 +223,6 @@ function Setup() {
         nextTableauPoint.translate(CARD_SIZE_X + 30, 0);
     }
 
-    // Deck
     GameState.deck = new Deck(new Point(CANVAS_WIDTH - (CANVAS_WIDTH - 70), CANVAS_HEIGHT - 200));
 
     Draw();
@@ -271,14 +268,12 @@ function handleMouseDown(e) {
         }
     });
 
-    // Deck cards check
     GameState.deck.cards.forEach(c => {
         if (isClicked(lastMousePoint, c)) {
             draggedCard = c;
         }
     });
 
-    // Deck click check
     if (isClicked(lastMousePoint, GameState.deck)) {
         if (GameState.cards.length === 0) {
             GameState.deck.reset();

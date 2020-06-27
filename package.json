@@ -1,5 +1,5 @@
 {
-  "name": "solitaire",
+  "name": "simple-solitaire",
   "version": "0.1.0",
   "description": "Simple Solitaire clone",
   "main": "./src/main.js",

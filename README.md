@@ -1,4 +1,4 @@
-# simple-solitaire
+# Simple Web Solitaire
 A simple working clone of Solitaire using nothing but Vanilla JS, the Canvas API and a simple Rollup setup.
 
 ![Demo of the game](docs/solitaire.gif)

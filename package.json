@@ -1,7 +1,7 @@
 {
   "name": "simple-solitaire",
   "version": "0.1.0",
-  "description": "Simple Solitaire clone",
+  "description": "A dead simple Solitaire clone",
   "main": "./src/main.js",
   "scripts": {
     "build": "rollup -c",
@@ -10,14 +10,14 @@
     "dev": "npm-run-all --parallel start watch"
   },
   "keywords": [],
-  "author": "cudacoder",
+  "author": "guychouk",
   "license": "ISC",
   "devDependencies": {
-    "@babel/core": "^7.10.3",
-    "eslint": "^7.3.1",
-    "npm-run-all": "^4.1.5",
-    "rollup": "^2.18.0",
-    "rollup-plugin-babel": "^4.4.0",
-    "serve": "^11.3.0"
+    "@babel/core": "7.10.3",
+    "eslint": "7.3.1",
+    "npm-run-all": "4.1.5",
+    "rollup": "2.18.0",
+    "rollup-plugin-babel": "4.4.0",
+    "serve": "11.3.0"
   }
 }

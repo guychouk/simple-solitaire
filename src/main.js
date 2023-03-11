@@ -7,7 +7,7 @@ const CANVAS_HEIGHT = document.documentElement.clientHeight;
 const SUITS_TO_COLORS = ['black', 'red', 'red', 'black']
 
 const Sprites = new Image();
-const GameState = {foundations: [], tableaus: [], cards: [], deck: null, win: false};
+const GameState = { foundations: [], tableaus: [], cards: [], deck: null, win: false };
 
 const canvas = document.createElement('CANVAS');
 const ctx = canvas.getContext('2d');
@@ -20,17 +20,13 @@ let isDown = false;
 let draggedCard = null;
 
 function isColliding(rect1, rect2) {
-    if (rect1.point.x < rect2.point.x + rect2.width &&
-        rect1.point.x + rect1.width > rect2.point.x &&
-        rect1.point.y < rect2.point.y + rect2.height &&
-        rect1.point.y + rect1.height > rect2.point.y) {
-        return true;
-    }
-    return false;
+  return rect1.point.x < rect2.point.x + rect2.width
+    && rect1.point.x + rect1.width > rect2.point.x
+    && rect1.point.y < rect2.point.y + rect2.height
+    && rect1.point.y + rect1.height > rect2.point.y;
 }
 
-function getMousePos(canvas, evt) {
-    let rect = canvas.getBoundingClientRect();
+function getMousePos(rect, evt) {
     return new Point(evt.clientX - rect.left, evt.clientY - rect.top);
 }
 
@@ -38,10 +34,6 @@ function isClicked(mousePoint, element) {
     let heightHit = mousePoint.y > element.point.y && mousePoint.y < element.point.y + element.height;
     let widthHit = mousePoint.x > element.point.x && mousePoint.x < element.point.x + element.width;
     return heightHit && widthHit;
-}
-
-function setWinState() {
-    GameState.win = GameState.foundations.every(f => f.topCard && f.topCard.number === 13);
 }
 
 function Point(x, y) {
@@ -225,10 +217,10 @@ function Setup() {
 
     GameState.deck = new Deck(new Point(CANVAS_WIDTH - (CANVAS_WIDTH - 70), CANVAS_HEIGHT - 200));
 
-    Draw();
+    draw();
 }
 
-function Draw() {
+function draw() {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     GameState.foundations.forEach(f => f.draw());
     GameState.tableaus.forEach(t => t.draw());
@@ -249,7 +241,7 @@ function handleMouseDown(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    lastMousePoint = getMousePos(canvas, e);
+    lastMousePoint = getMousePos(canvas.getBoundingClientRect(), e);
 
     GameState.tableaus.forEach(t => {
         if (isClicked(lastMousePoint, t) && t.cards.length !== 0) {
@@ -291,7 +283,7 @@ function handleMouseMove(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    let mousePoint = getMousePos(canvas, e);
+    let mousePoint = getMousePos(canvas.getBoundingClientRect(), e);
 
     let dx = mousePoint.x - lastMousePoint.x;
     let dy = mousePoint.y - lastMousePoint.y;
@@ -308,7 +300,7 @@ function handleMouseMove(e) {
         draggedCard.point.y += dy;
     }
 
-    Draw();
+    draw();
 }
 
 function handleMouseUp(e) {
@@ -323,7 +315,7 @@ function handleMouseUp(e) {
         if (hitElement && hitElement.isPushable(draggedCard)) {
             draggedCard.parent.remove(draggedCard);
             hitElement.push(draggedCard);
-            setWinState();
+            GameState.win = GameState.foundations.every(f => f.topCard && f.topCard.number === 13);
         } else {
             draggedCard.reset();
         }
@@ -344,5 +336,5 @@ function handleMouseUp(e) {
 
     isDown = false;
 
-    Draw();
+    draw();
 }
